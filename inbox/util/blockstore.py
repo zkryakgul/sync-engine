@@ -25,6 +25,8 @@ else:
 
 
 def save_to_blockstore(data_sha256, data):
+    # this code is save attachments unnecessary to the disk so disabled
+    return
     assert data is not None
     assert type(data) is not unicode
 
