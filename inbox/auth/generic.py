@@ -1,6 +1,7 @@
 import datetime
 import getpass
-from backports import ssl
+import ssl
+import sys
 from imapclient import IMAPClient
 import socket
 from OpenSSL._util import lib as ossllib
@@ -20,11 +21,16 @@ from inbox.crispin import CrispinClient
 
 PROVIDER = 'generic'
 AUTH_HANDLER_CLS = 'GenericAuthHandler'
-
+reload(sys)  
+sys.setdefaultencoding('utf8')
 
 class GenericAuthHandler(AuthHandler):
+    reload(sys)  
+    sys.setdefaultencoding('utf8')
 
     def get_account(self, target, email_address, response):
+        reload(sys)  
+        sys.setdefaultencoding('utf8')
         account = account_or_none(target, GenericAccount, email_address)
         if not account:
             account = self.create_account(email_address, response)
@@ -32,6 +38,8 @@ class GenericAuthHandler(AuthHandler):
         return account
 
     def create_account(self, email_address, response):
+        reload(sys)  
+        sys.setdefaultencoding('utf8')
         # This method assumes that the existence of an account for the
         # provider and email_address has been checked by the caller;
         # callers may have different methods of performing the check
@@ -63,6 +71,8 @@ class GenericAuthHandler(AuthHandler):
         return self.update_account(account, response)
 
     def update_account(self, account, response):
+        reload(sys)  
+        sys.setdefaultencoding('utf8')
         account.email_address = response['email']
         for attribute in ['name', 'imap_username', 'imap_password',
                           'smtp_username', 'smtp_password', 'password']:
@@ -113,6 +123,8 @@ class GenericAuthHandler(AuthHandler):
         return account
 
     def connect_account(self, account, use_timeout=True):
+        reload(sys)  
+        sys.setdefaultencoding('utf8')
         """
         Returns an authenticated IMAP connection for the given account.
 
@@ -179,6 +191,8 @@ class GenericAuthHandler(AuthHandler):
         return conn
 
     def _supports_condstore(self, conn):
+        reload(sys)  
+        sys.setdefaultencoding('utf8')
         """
         Check if the connection supports CONDSTORE
 
@@ -194,6 +208,8 @@ class GenericAuthHandler(AuthHandler):
         return False
 
     def verify_account(self, account):
+        reload(sys)  
+        sys.setdefaultencoding('utf8')
         """
         Verifies a generic IMAP account by logging in and logging out to both
         the IMAP/ SMTP servers.
@@ -273,6 +289,8 @@ class GenericAuthHandler(AuthHandler):
         return True
 
     def interactive_auth(self, email_address):
+        reload(sys)  
+        sys.setdefaultencoding('utf8')
         response = dict(email=email_address)
 
         if self.provider_name == 'custom':
@@ -313,6 +331,8 @@ class GenericAuthHandler(AuthHandler):
 
 
 def _auth_requires_app_password(exc):
+    reload(sys)  
+    sys.setdefaultencoding('utf8')
     # Some servers require an application specific password, token, or
     # authorization code to login
     PREFIXES = (
@@ -325,6 +345,8 @@ def _auth_requires_app_password(exc):
 
 
 def _auth_is_invalid(exc):
+    reload(sys)  
+    sys.setdefaultencoding('utf8')
     # IMAP doesn't really have error semantics, so we have to match the error
     # message against a list of known response strings to determine whether we
     # couldn't log in because the credentials are invalid, or because of some
@@ -355,6 +377,8 @@ def _auth_is_invalid(exc):
 
 
 def create_imap_connection(host, port, ssl_required, use_timeout=True):
+    reload(sys)  
+    sys.setdefaultencoding('utf8')
     """
     Return a connection to the IMAP server.
     The connection is encrypted if the specified port is the default IMAP
@@ -367,7 +391,10 @@ def create_imap_connection(host, port, ssl_required, use_timeout=True):
     timeout = 120 if use_timeout else None
 
     # TODO: certificate pinning for well known sites
-    context = create_default_context()
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+
     conn = IMAPClient(host, port=port, use_uid=True,
                       ssl=use_ssl, ssl_context=context, timeout=timeout)
 
@@ -388,44 +415,3 @@ def create_imap_connection(host, port, ssl_required, use_timeout=True):
             raise SSLNotSupportedError('Required IMAP STARTTLS not supported.')
 
     return conn
-
-
-def create_default_context():
-    """
-    Return a backports.ssl.SSLContext object configured with sensible
-    default settings. This was adapted from imapclient.create_default_context
-    to allow all ciphers and disable certificate verification.
-
-    """
-    # adapted from Python 3.4's ssl.create_default_context
-
-    context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-
-    # do not verify that certificate is signed nor that the
-    # certificate matches the hostname
-    context.verify_mode = ssl.CERT_NONE
-    context.check_hostname = False
-
-    # SSLv2 considered harmful.
-    context.options |= ossllib.SSL_OP_NO_SSLv2
-
-    # SSLv3 has problematic security and is only required for really old
-    # clients such as IE6 on Windows XP
-    context.options |= ossllib.SSL_OP_NO_SSLv3
-
-    # disable compression to prevent CRIME attacks (OpenSSL 1.0+)
-    context.options |= ossllib.SSL_OP_NO_COMPRESSION
-
-    # Prefer the server's ciphers by default so that we get stronger
-    # encryption
-    context.options |= ossllib.SSL_OP_CIPHER_SERVER_PREFERENCE
-
-    # Use single use keys in order to improve forward secrecy
-    context.options |= ossllib.SSL_OP_SINGLE_DH_USE
-    context.options |= ossllib.SSL_OP_SINGLE_ECDH_USE
-
-    context._ctx.set_mode(ossllib.SSL_MODE_ENABLE_PARTIAL_WRITE |
-                          ossllib.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
-                          ossllib.SSL_MODE_AUTO_RETRY)
-
-    return context

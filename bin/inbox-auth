@@ -29,6 +29,8 @@ configure_logging(config.get('LOGLEVEL'))
 @click.option('--provider', is_flag=False,
               help='Manually specify the provider instead of trying to detect it')
 def main(email_address, reauth, target, provider):
+    reload(sys)  
+    sys.setdefaultencoding('utf8')
     """ Auth an email account. """
     preflight()
 
@@ -63,6 +65,7 @@ def main(email_address, reauth, target, provider):
             if auth_handler.verify_account(account):
                 db_session.add(account)
                 db_session.commit()
+                print "USER_ID: ", account.namespace.public_id, "\n"
         except NotSupportedError as e:
             sys.exit(str(e))
 

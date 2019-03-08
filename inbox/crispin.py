@@ -2,6 +2,7 @@
 import contextlib
 import re
 import time
+import sys
 import imaplib
 import imapclient
 
@@ -216,6 +217,8 @@ class CrispinConnectionPool(object):
                 self.client_cls = CrispinClient
 
     def _new_raw_connection(self):
+        reload(sys)  
+        sys.setdefaultencoding('utf8')
         """Returns a new, authenticated IMAPClient instance for the account."""
         with session_scope(self.account_id) as db_session:
             if self.provider == 'gmail':
